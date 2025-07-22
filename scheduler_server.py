@@ -9,8 +9,8 @@ import requests
 from typing import Optional
 
 # ===================== CONFIGURATION =====================
-SCHEDULE_HOUR = 11  # 10 AM (used after first run)
-SCHEDULE_MINUTE = 5  # 20 minutes (used after first run)
+SCHEDULE_HOUR = 9  # 10 AM (used after first run)
+SCHEDULE_MINUTE = 10  # 20 minutes (used after first run)
 IST = pytz.timezone('Asia/Kolkata')
 LOG_FILE = 'scheduler_audit.log'
 LOGIN_LOG_FILE = 'login_audit.log'
@@ -180,6 +180,8 @@ def logged_out():
     </html>
     ''')
 
+# Update navigation and color palette for home, dashboard, and email_status
+# --- HOME PAGE ---
 @app.route('/')
 @login_required
 def home():
@@ -191,19 +193,29 @@ def home():
         <style>
             body {
                 font-family: 'Fira Mono', 'Consolas', monospace;
-                background: linear-gradient(135deg, #181c20 0%, #23272e 100%);
+                background: linear-gradient(135deg, #f8fafc 0%, #e9ecef 100%);
                 margin: 0;
                 min-height: 100vh;
+                color: #222;
+                transition: background 0.3s, color 0.3s;
+            }
+            body.dark-mode {
+                background: linear-gradient(135deg, #181c20 0%, #23272e 100%);
+                color: #fff;
             }
             .navbar {
-                background: #181c20;
+                background: #f5f6fa;
                 padding: 1.2em 2em;
                 display: flex;
                 align-items: center;
-                box-shadow: 0 2px 8px rgba(44,62,80,0.18);
+                box-shadow: 0 2px 8px rgba(44,62,80,0.08);
+                transition: background 0.3s;
+            }
+            .navbar.dark-mode {
+                background: #181c20;
             }
             .navbar a {
-                color: #39ff14;
+                color: #0071e3;
                 text-decoration: none;
                 margin-right: 2em;
                 font-weight: bold;
@@ -212,57 +224,134 @@ def home():
                 letter-spacing: 1px;
             }
             .navbar a:hover {
-                color: #00c3ff;
+                color: #222;
             }
-            .container {
-                max-width: 700px;
-                margin: 4em auto;
-                background: #23272e;
-                border-radius: 12px;
-                box-shadow: 0 4px 24px rgba(44,62,80,0.18);
-                padding: 2.5em 2.5em;
-                text-align: center;
+            .navbar.dark-mode a {
+                color: #e0c36b;
+            }
+            .navbar.dark-mode a:hover {
                 color: #fff;
             }
-            h1 {
-                color: #39ff14;
-                font-size: 2.2em;
-                margin-bottom: 0.5em;
-            }
-            p { color: #b2becd; }
             .logout-btn {
                 float: right; background: #e74c3c; color: #fff; border: none; padding: 0.5em 1.2em; border-radius: 4px; cursor: pointer; margin-left: auto; font-weight: bold;
             }
             .logout-btn:hover { background: #c0392b; }
-            .download-link {
-                color: #00c3ff; text-decoration: underline; font-weight: bold;
+            .theme-switch {
+                margin-left: 2em;
+                display: flex;
+                align-items: center;
             }
-            .download-link:hover { color: #39ff14; }
-            hr { border: 0; border-top: 1px solid #333; margin: 2em 0; }
+            .switch {
+                position: relative;
+                display: inline-block;
+                width: 48px;
+                height: 24px;
+            }
+            .switch input { display: none; }
+            .slider {
+                position: absolute;
+                cursor: pointer;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: #ccc;
+                transition: .4s;
+                border-radius: 24px;
+            }
+            .slider:before {
+                position: absolute;
+                content: "";
+                height: 18px;
+                width: 18px;
+                left: 3px;
+                bottom: 3px;
+                background: #fff;
+                transition: .4s;
+                border-radius: 50%;
+            }
+            input:checked + .slider {
+                background: #0071e3;
+            }
+            input:checked + .slider:before {
+                transform: translateX(24px);
+            }
+            .container {
+                max-width: 700px;
+                margin: 4em auto;
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 4px 24px rgba(44,62,80,0.08);
+                padding: 2.5em 2.5em;
+                text-align: center;
+                color: #222;
+            }
+            .container.dark-mode { background: #23272e; color: #fff; }
+            h1, h2, h4 { color: #0071e3; }
+            h1.dark-mode, h2.dark-mode, h4.dark-mode { color: #e0c36b; }
+            .download-link {
+                color: #0071e3; text-decoration: underline; font-weight: bold;
+            }
+            .download-link:hover { color: #222; }
+            hr { border: 0; border-top: 1px solid #e0e0e0; margin: 2em 0; }
             .footer { margin-top: 2em; color: #888; font-size: 0.95em; }
         </style>
     </head>
     <body>
-        <div class="navbar">
+        <div class="navbar" id="navbar">
             <a href="/">Home</a>
             <a href="/status">Status Log</a>
             <a href="/dashboard">Dashboard</a>
+            <a href="/email_status">Email Status</a>
             <a href="/download_log">Download Log</a>
+            <div class="theme-switch">
+                <label class="switch">
+                    <input type="checkbox" id="theme-toggle">
+                    <span class="slider"></span>
+                </label>
+                <span style="margin-left:0.7em;font-size:1em;">Dark Mode</span>
+            </div>
             <form action="/logout" method="get" style="margin-left:auto;display:inline;">
                 <button class="logout-btn" type="submit">Logout</button>
             </form>
         </div>
-        <div class="container">
-            <h1>Welcome to the Email Campaign Scheduler</h1>
+        <div class="container" id="main-container">
+            <h1 id="main-title">Welcome to the Email Campaign Scheduler</h1>
             <p>Use the navigation bar above to view campaign status, logs, and analytics.</p>
             <p style="color:#888; font-size:0.95em;">Server is running and ready to manage your automated email campaigns.</p>
             <hr>
             <p><b>Download your full email send log as a CSV file:</b><br>
             <a class="download-link" href="/download_log">Download send_log.csv</a></p>
             <div class="footer">
-                <h4>Created By - Ayush Srivastava | <a href="https://portfolio-ayush6944s-projects.vercel.app/" style="color:#00c3ff;">Portfolio</a></h4>
+                <h4>Created By - Ayush Srivastava | <a href="https://portfolio-ayush6944s-projects.vercel.app/" style="color:#0071e3;">Portfolio</a></h4>
             </div>
         </div>
+        <script>
+        // Universal dark mode switcher
+        const themeToggle = document.getElementById('theme-toggle');
+        const body = document.body;
+        const navbar = document.getElementById('navbar');
+        const mainContainer = document.getElementById('main-container');
+        const mainTitle = document.getElementById('main-title');
+        function setDarkMode(on) {
+            if (on) {
+                body.classList.add('dark-mode');
+                navbar.classList.add('dark-mode');
+                mainContainer.classList.add('dark-mode');
+                mainTitle.classList.add('dark-mode');
+            } else {
+                body.classList.remove('dark-mode');
+                navbar.classList.remove('dark-mode');
+                mainContainer.classList.remove('dark-mode');
+                mainTitle.classList.remove('dark-mode');
+            }
+        }
+        themeToggle.addEventListener('change', function() {
+            setDarkMode(this.checked);
+            localStorage.setItem('darkMode', this.checked ? '1' : '0');
+        });
+        if (localStorage.getItem('darkMode') === '1') {
+            themeToggle.checked = true;
+            setDarkMode(true);
+        }
+        </script>
     </body>
     </html>
     ''')
@@ -357,6 +446,7 @@ def status():
     '''
     return html
 
+# --- DASHBOARD PAGE ---
 @app.route('/dashboard')
 @login_required
 def dashboard():
@@ -365,45 +455,60 @@ def dashboard():
     db_path = os.path.join(os.path.dirname(__file__), 'data/companies.db')
     total_sent = 0
     total_pending = 0
-    last_3_days = []
+    last_10_days = []
     try:
         with sqlite3.connect(db_path) as conn:
             cursor = conn.cursor()
-            # Total sent
             cursor.execute("SELECT COUNT(*) FROM companies WHERE sent_timestamp IS NOT NULL")
             total_sent = cursor.fetchone()[0]
-            # Total pending
             cursor.execute("SELECT COUNT(*) FROM companies WHERE sent_timestamp IS NULL")
             total_pending = cursor.fetchone()[0]
-            # Last 3 days sent
             today = datetime.now().date()
-            for i in range(3):
+            for i in range(9, -1, -1):
                 day = today - timedelta(days=i)
                 cursor.execute("SELECT COUNT(*) FROM companies WHERE date(sent_timestamp) = ?", (day.isoformat(),))
                 count = cursor.fetchone()[0]
-                last_3_days.append({'date': day.strftime('%Y-%m-%d'), 'count': count})
+                last_10_days.append({'date': day.strftime('%Y-%m-%d'), 'count': count})
     except Exception as e:
         return f"<h2>Error loading dashboard: {e}</h2>"
+    # Prepare chart data and table rows to avoid nested expressions in f-strings
+    import json as _json
+    chart_labels = _json.dumps([d['date'] for d in last_10_days])
+    chart_data = _json.dumps([d['count'] for d in last_10_days])
+    table_rows = ''.join([f'<tr><td>{row["date"]}</td><td>{row["count"]}</td></tr>' for row in last_10_days])
+    total_sent_js = total_sent
+    total_pending_js = total_pending
     html = f"""
     <html>
     <head><title>Email Campaign Dashboard</title>
     <link href='https://fonts.googleapis.com/css?family=Fira+Mono:400,700&display=swap' rel='stylesheet'>
+    <script src=\"https://cdn.jsdelivr.net/npm/chart.js\"></script>
     <style>
         body {{
             font-family: 'Fira Mono', 'Consolas', monospace;
-            background: linear-gradient(135deg, #181c20 0%, #23272e 100%);
+            background: linear-gradient(135deg, #f8fafc 0%, #e9ecef 100%);
             margin: 0;
             min-height: 100vh;
+            color: #222;
+            transition: background 0.3s, color 0.3s;
+        }}
+        body.dark-mode {{
+            background: linear-gradient(135deg, #181c20 0%, #23272e 100%);
+            color: #fff;
         }}
         .navbar {{
-            background: #181c20;
+            background: #f5f6fa;
             padding: 1.2em 2em;
             display: flex;
             align-items: center;
-            box-shadow: 0 2px 8px rgba(44,62,80,0.18);
+            box-shadow: 0 2px 8px rgba(44,62,80,0.08);
+            transition: background 0.3s;
+        }}
+        .navbar.dark-mode {{
+            background: #181c20;
         }}
         .navbar a {{
-            color: #39ff14;
+            color: #0071e3;
             text-decoration: none;
             margin-right: 2em;
             font-weight: bold;
@@ -412,66 +517,443 @@ def dashboard():
             letter-spacing: 1px;
         }}
         .navbar a:hover {{
-            color: #00c3ff;
+            color: #222;
+        }}
+        .navbar.dark-mode a {{
+            color: #e0c36b;
+        }}
+        .navbar.dark-mode a:hover {{
+            color: #fff;
         }}
         .logout-btn {{
             float: right; background: #e74c3c; color: #fff; border: none; padding: 0.5em 1.2em; border-radius: 4px; cursor: pointer; margin-left: auto; font-weight: bold;
         }}
         .logout-btn:hover {{ background: #c0392b; }}
+        .theme-switch {{
+            margin-left: 2em;
+            display: flex;
+            align-items: center;
+        }}
+        .switch {{
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }}
+        .switch input {{ display: none; }}
+        .slider {{
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }}
+        .slider:before {{
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background: #fff;
+            transition: .4s;
+            border-radius: 50%;
+        }}
+        input:checked + .slider {{
+            background: #0071e3;
+        }}
+        input:checked + .slider:before {{
+            transform: translateX(24px);
+        }}
         .dashboard-container {{
-            max-width: 800px;
+            max-width: 700px;
             margin: 4em auto;
-            background: #23272e;
-            border-radius: 12px;
-            box-shadow: 0 4px 24px rgba(44,62,80,0.18);
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 8px 32px rgba(44,62,80,0.08);
             padding: 2.5em 2.5em;
+            color: #222;
+            transition: background 0.3s, color 0.3s;
+        }}
+        .dashboard-container.dark-mode {{
+            background: #23272e;
             color: #fff;
         }}
-        h1 {{ color: #39ff14; font-size: 2em; margin-bottom: 1em; }}
-        .stats {{ display: flex; justify-content: space-around; margin-bottom: 2em; }}
-        .stat-card {{ background: #181c20; border-radius: 8px; padding: 1.5em 2em; box-shadow: 0 2px 8px rgba(44,62,80,0.18); text-align: center; }}
-        .stat-label {{ color: #00c3ff; font-size: 1.1em; margin-bottom: 0.5em; }}
-        .stat-value {{ color: #39ff14; font-size: 2em; font-weight: bold; }}
-        table {{ width: 100%; border-collapse: collapse; margin-top: 2em; background: #181c20; border-radius: 8px; overflow: hidden; }}
+        h1 {{ color: #0071e3; font-size: 2.2em; margin-bottom: 1.2em; letter-spacing: 2px; }}
+        h1.dark-mode {{ color: #e0c36b; }}
+        .stats {{ display: flex; justify-content: space-between; margin-bottom: 2.5em; gap: 2em; }}
+        .stat-card {{ background: #f5f6fa; border-radius: 12px; padding: 2em 2.5em; box-shadow: 0 2px 12px rgba(44,62,80,0.08); text-align: center; flex: 1; transition: background 0.3s, color 0.3s; }}
+        .stat-card.dark-mode {{ background: #181c20; color: #fff; }}
+        .stat-label {{ color: #888; font-size: 1.1em; margin-bottom: 0.7em; letter-spacing: 1px; }}
+        .stat-label.dark-mode {{ color: #bfa14a; }}
+        .stat-value {{ color: #0071e3; font-size: 2.5em; font-weight: bold; letter-spacing: 1px; }}
+        .stat-value.dark-mode {{ color: #e0c36b; }}
+        .charts-row {{ display: flex; gap: 2em; margin-top: 2em; margin-bottom: 2em; flex-wrap: wrap; }}
+        .chart-card {{ background: #f5f6fa; border-radius: 12px; box-shadow: 0 2px 12px rgba(44,62,80,0.08); padding: 1.5em 1em; flex: 1; min-width: 300px; transition: background 0.3s, color 0.3s; }}
+        .chart-card.dark-mode {{ background: #181c20; color: #fff; }}
+        .section-title {{ color: #888; font-size: 1.3em; margin-top: 2.5em; margin-bottom: 1em; letter-spacing: 1px; text-align: left; }}
+        .section-title.dark-mode {{ color: #bfa14a; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 2.5em; background: #f5f6fa; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(44,62,80,0.05); }}
+        table.dark-mode {{ background: #181c20; color: #fff; }}
         th, td {{ padding: 1em; text-align: center; }}
-        th {{ background: #23272e; color: #00c3ff; }}
-        tr:nth-child(even) {{ background: #23272e; }}
-        tr:nth-child(odd) {{ background: #181c20; }}
+        th {{ background: #e9ecef; color: #0071e3; font-size: 1.1em; letter-spacing: 1px; }}
+        th.dark-mode {{ background: #23272e; color: #e0c36b; }}
+        tr:nth-child(even) {{ background: #f5f6fa; }}
+        tr:nth-child(odd) {{ background: #fff; }}
+        tr.dark-mode:nth-child(even) {{ background: #23272e; }}
+        tr.dark-mode:nth-child(odd) {{ background: #181c20; }}
         button {{ background: #e74c3c; color: #fff; border: none; padding: 0.7em 2em; border-radius: 4px; font-size: 1em; cursor: pointer; margin-top: 2em; font-weight: bold; }}
         button:hover {{ background: #c0392b; }}
     </style>
     </head>
     <body>
-        <div class='navbar'>
-            <a href="/">Home</a>
-            <a href="/status">Status Log</a>
-            <a href="/dashboard">Dashboard</a>
-            <a href="/download_log">Download Log</a>
+        <div class='navbar' id='navbar'>
+            <a href=\"/\">Home</a>
+            <a href=\"/status\">Status Log</a>
+            <a href=\"/dashboard\">Dashboard</a>
+            <a href=\"/email_status\">Email Status</a>
+            <a href=\"/download_log\">Download Log</a>
+            <div class="theme-switch">
+                <label class="switch">
+                    <input type="checkbox" id="theme-toggle">
+                    <span class="slider"></span>
+                </label>
+                <span style="margin-left:0.7em;font-size:1em;">Dark Mode</span>
+            </div>
             <form action="/logout" method="get" style="margin-left:auto;display:inline;">
                 <button class="logout-btn" type="submit">Logout</button>
             </form>
         </div>
-        <div class='dashboard-container'>
-            <h1>Email Campaign Dashboard</h1>
+        <div class='dashboard-container' id='dashboard-container'>
+            <h1 id='dashboard-title'>Email Campaign Dashboard</h1>
             <div class='stats'>
-                <div class='stat-card'>
-                    <div class='stat-label'>Total Sent Emails</div>
-                    <div class='stat-value'>{total_sent}</div>
+                <div class='stat-card' id='stat-card-sent'>
+                    <div class='stat-label' id='stat-label-sent'>Total Sent Emails</div>
+                    <div class='stat-value' id='stat-value-sent'>{total_sent}</div>
                 </div>
-                <div class='stat-card'>
-                    <div class='stat-label'>Total Pending Emails</div>
-                    <div class='stat-value'>{total_pending}</div>
+                <div class='stat-card' id='stat-card-pending'>
+                    <div class='stat-label' id='stat-label-pending'>Total Pending Emails</div>
+                    <div class='stat-value' id='stat-value-pending'>{total_pending}</div>
                 </div>
             </div>
-            <h2 style='color:#00c3ff;'>Last 3 Days Email Sent</h2>
-            <table>
+            <div class='charts-row'>
+                <div class='chart-card' id='chart-card-line'>
+                    <canvas id="lineChart" width="350" height="220"></canvas>
+                </div>
+                <div class='chart-card' id='chart-card-doughnut'>
+                    <canvas id="doughnutChart" width="220" height="220"></canvas>
+                </div>
+            </div>
+            <div class='section-title' id='section-title-table'>Last 10 Days Email Sent</div>
+            <table id='progress-table'>
                 <tr><th>Date</th><th>Emails Sent</th></tr>
-                {''.join(f'<tr><td>{d["date"]}</td><td>{d["count"]}</td></tr>' for d in last_3_days)}
+                {table_rows}
             </table>
             <form action="/stop_campaign" method="post">
                 <button type="submit">Stop Campaign</button>
             </form>
         </div>
+        <script>
+        // Chart.js line chart for last 10 days
+        const ctxLine = document.getElementById('lineChart').getContext('2d');
+        const lineChart = new Chart(ctxLine, {{
+            type: 'line',
+            data: {{
+                labels: {chart_labels},
+                datasets: [{{
+                    label: 'Emails Sent',
+                    data: {chart_data},
+                    borderColor: '#0071e3',
+                    backgroundColor: 'rgba(0,113,227,0.08)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#0071e3',
+                }}]
+            }},
+            options: {{
+                plugins: {{ legend: {{ display: false }} }},
+                scales: {{
+                    x: {{ grid: {{ display: false }} }},
+                    y: {{ beginAtZero: true, grid: {{ color: '#e0e0e0' }} }}
+                }}
+            }}
+        }});
+        // Chart.js doughnut chart for sent vs pending
+        const ctxDoughnut = document.getElementById('doughnutChart').getContext('2d');
+        const doughnutChart = new Chart(ctxDoughnut, {{
+            type: 'doughnut',
+            data: {{
+                labels: ['Sent', 'Pending'],
+                datasets: [{{
+                    data: [{total_sent_js}, {total_pending_js}],
+                    backgroundColor: ['#0071e3', '#e0e0e0'],
+                    borderWidth: 0
+                }}]
+            }},
+            options: {{
+                plugins: {{ legend: {{ display: true, position: 'bottom' }} }},
+                cutout: '70%',
+            }}
+        }});
+        // Theme switcher
+        const themeToggle = document.getElementById('theme-toggle');
+        const body = document.body;
+        const navbar = document.getElementById('navbar');
+        const dashboardContainer = document.getElementById('dashboard-container');
+        const dashboardTitle = document.getElementById('dashboard-title');
+        const statCardSent = document.getElementById('stat-card-sent');
+        const statCardPending = document.getElementById('stat-card-pending');
+        const statLabelSent = document.getElementById('stat-label-sent');
+        const statLabelPending = document.getElementById('stat-label-pending');
+        const statValueSent = document.getElementById('stat-value-sent');
+        const statValuePending = document.getElementById('stat-value-pending');
+        const chartCardLine = document.getElementById('chart-card-line');
+        const chartCardDoughnut = document.getElementById('chart-card-doughnut');
+        const sectionTitleTable = document.getElementById('section-title-table');
+        const progressTable = document.getElementById('progress-table');
+        function setDarkMode(on) {{
+            if (on) {{
+                body.classList.add('dark-mode');
+                navbar.classList.add('dark-mode');
+                dashboardContainer.classList.add('dark-mode');
+                dashboardTitle.classList.add('dark-mode');
+                statCardSent.classList.add('dark-mode');
+                statCardPending.classList.add('dark-mode');
+                statLabelSent.classList.add('dark-mode');
+                statLabelPending.classList.add('dark-mode');
+                statValueSent.classList.add('dark-mode');
+                statValuePending.classList.add('dark-mode');
+                chartCardLine.classList.add('dark-mode');
+                chartCardDoughnut.classList.add('dark-mode');
+                sectionTitleTable.classList.add('dark-mode');
+                progressTable.classList.add('dark-mode');
+                for (const row of progressTable.rows) row.classList.add('dark-mode');
+            }} else {{
+                body.classList.remove('dark-mode');
+                navbar.classList.remove('dark-mode');
+                dashboardContainer.classList.remove('dark-mode');
+                dashboardTitle.classList.remove('dark-mode');
+                statCardSent.classList.remove('dark-mode');
+                statCardPending.classList.remove('dark-mode');
+                statLabelSent.classList.remove('dark-mode');
+                statLabelPending.classList.remove('dark-mode');
+                statValueSent.classList.remove('dark-mode');
+                statValuePending.classList.remove('dark-mode');
+                chartCardLine.classList.remove('dark-mode');
+                chartCardDoughnut.classList.remove('dark-mode');
+                sectionTitleTable.classList.remove('dark-mode');
+                progressTable.classList.remove('dark-mode');
+                for (const row of progressTable.rows) row.classList.remove('dark-mode');
+            }}
+        }}
+        themeToggle.addEventListener('change', function() {{
+            setDarkMode(this.checked);
+            localStorage.setItem('darkMode', this.checked ? '1' : '0');
+        }});
+        // On load, set theme from localStorage
+        if (localStorage.getItem('darkMode') === '1') {{
+            themeToggle.checked = true;
+            setDarkMode(true);
+        }}
+        </script>
+    </body>
+    </html>
+    """
+    return html
+
+# --- EMAIL STATUS PAGE ---
+@app.route('/email_status')
+@login_required
+def email_status():
+    import csv
+    import json
+    from collections import defaultdict
+    accounts_path = os.path.join(os.path.dirname(__file__), 'src/email_accounts.json')
+    with open(accounts_path, 'r') as f:
+        accounts_json = json.load(f)
+        sender_accounts = accounts_json['email_accounts']
+    send_counts = defaultdict(int)
+    today = datetime.now().date().isoformat()
+    send_log_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/send_log.csv'))
+    if os.path.exists(send_log_path):
+        with open(send_log_path, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row['date_sent'][:10] == today:
+                    send_counts[row['sender_email']] += 1
+    table_rows = ''.join([f'<tr><td>{acc["sender_email"]}</td><td>Session Only</td><td>{send_counts.get(acc["sender_email"], 0)}</td></tr>' for acc in sender_accounts])
+    html = f"""
+    <html>
+    <head><title>Email Account Status</title>
+    <link href='https://fonts.googleapis.com/css?family=Fira+Mono:400,700&display=swap' rel='stylesheet'>
+    <style>
+        body {{
+            font-family: 'Fira Mono', 'Consolas', monospace;
+            background: linear-gradient(135deg, #f8fafc 0%, #e9ecef 100%);
+            margin: 0;
+            min-height: 100vh;
+            color: #222;
+            transition: background 0.3s, color 0.3s;
+        }}
+        body.dark-mode {{
+            background: linear-gradient(135deg, #181c20 0%, #23272e 100%);
+            color: #fff;
+        }}
+        .navbar {{
+            background: #f5f6fa;
+            padding: 1.2em 2em;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(44,62,80,0.08);
+            transition: background 0.3s;
+        }}
+        .navbar.dark-mode {{
+            background: #181c20;
+        }}
+        .navbar a {{
+            color: #0071e3;
+            text-decoration: none;
+            margin-right: 2em;
+            font-weight: bold;
+            font-size: 1.1em;
+            transition: color 0.2s;
+            letter-spacing: 1px;
+        }}
+        .navbar a:hover {{
+            color: #222;
+        }}
+        .navbar.dark-mode a {{
+            color: #e0c36b;
+        }}
+        .navbar.dark-mode a:hover {{
+            color: #fff;
+        }}
+        .logout-btn {{
+            float: right; background: #e74c3c; color: #fff; border: none; padding: 0.5em 1.2em; border-radius: 4px; cursor: pointer; margin-left: auto; font-weight: bold;
+        }}
+        .logout-btn:hover {{ background: #c0392b; }}
+        .theme-switch {{
+            margin-left: 2em;
+            display: flex;
+            align-items: center;
+        }}
+        .switch {{
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }}
+        .switch input {{ display: none; }}
+        .slider {{
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }}
+        .slider:before {{
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background: #fff;
+            transition: .4s;
+            border-radius: 50%;
+        }}
+            input:checked + .slider {{
+            background: #0071e3;
+        }}
+        input:checked + .slider:before {{
+            transform: translateX(24px);
+        }}
+        .status-container {{
+            max-width: 700px;
+            margin: 4em auto;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 8px 32px rgba(44,62,80,0.08);
+            padding: 2.5em 2.5em;
+            color: #222;
+            transition: background 0.3s, color 0.3s;
+        }}
+        .status-container.dark-mode {{ background: #23272e; color: #fff; }}
+        h1 {{ color: #0071e3; font-size: 2.2em; margin-bottom: 1.2em; letter-spacing: 2px; }}
+        h1.dark-mode {{ color: #e0c36b; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 2.5em; background: #f5f6fa; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(44,62,80,0.05); }}
+        table.dark-mode {{ background: #181c20; color: #fff; }}
+        th, td {{ padding: 1em; text-align: center; }}
+        th {{ background: #e9ecef; color: #0071e3; font-size: 1.1em; letter-spacing: 1px; }}
+        th.dark-mode {{ background: #23272e; color: #e0c36b; }}
+                tr:nth-child(even) {{ background: #f5f6fa; }}
+        tr:nth-child(odd) {{ background: #fff; }}
+        tr.dark-mode:nth-child(even) {{ background: #23272e; }}
+        tr.dark-mode:nth-child(odd) {{ background: #181c20; }}
+    </style>
+    </head>
+    <body>
+        <div class='navbar' id='navbar'>
+            <a href="/">Home</a>
+            <a href="/status">Status Log</a>
+            <a href="/dashboard">Dashboard</a>
+            <a href="/email_status">Email Status</a>
+            <a href="/download_log">Download Log</a>
+            <div class="theme-switch">
+                <label class="switch">
+                    <input type="checkbox" id="theme-toggle">
+                    <span class="slider"></span>
+                </label>
+                <span style="margin-left:0.7em;font-size:1em;">Dark Mode</span>
+            </div>
+            <form action="/logout" method="get" style="margin-left:auto;display:inline;">
+                <button class="logout-btn" type="submit">Logout</button>
+            </form>
+        </div>
+        <div class='status-container' id='status-container'>
+            <h1 id='status-title'>Email Account Status</h1>
+            <table id='status-table'>
+                <tr><th>Sender Email</th><th>Exhausted (Today)</th><th>Emails Sent Today</th></tr>
+                {table_rows}
+            </table>
+        </div>
+        <script>
+        // Universal dark mode switcher
+        const themeToggle = document.getElementById('theme-toggle');
+        const body = document.body;
+        const navbar = document.getElementById('navbar');
+        const statusContainer = document.getElementById('status-container');
+        const statusTitle = document.getElementById('status-title');
+        const statusTable = document.getElementById('status-table');
+        function setDarkMode(on) {{
+            if (on) {{
+                body.classList.add('dark-mode');
+                navbar.classList.add('dark-mode');
+                statusContainer.classList.add('dark-mode');
+                statusTitle.classList.add('dark-mode');
+                statusTable.classList.add('dark-mode');
+                for (const row of statusTable.rows) row.classList.add('dark-mode');
+            }} else {{
+                body.classList.remove('dark-mode');
+                navbar.classList.remove('dark-mode');
+                statusContainer.classList.remove('dark-mode');
+                statusTitle.classList.remove('dark-mode');
+                statusTable.classList.remove('dark-mode');
+                for (const row of statusTable.rows) row.classList.remove('dark-mode');
+            }}
+        }}
+        themeToggle.addEventListener('change', function() {{
+            setDarkMode(this.checked);
+            localStorage.setItem('darkMode', this.checked ? '1' : '0');
+        }});
+        if (localStorage.getItem('darkMode') === '1') {{
+            themeToggle.checked = true;
+            setDarkMode(true);
+        }}
+        </script>
     </body>
     </html>
     """
@@ -494,6 +976,111 @@ def stop_campaign():
     log_audit('Campaign STOP requested by user.')
     # You may want to use a process manager or set a flag checked by the campaign loop.
     return redirect(url_for('dashboard'))
+
+# ===================== ADDED ROUTE STUBS =====================
+
+@app.route('/campaigns')
+def list_campaigns():
+    """List all campaigns."""
+    return "List of all campaigns (stub)"
+
+@app.route('/campaigns/<int:campaign_id>')
+def campaign_details(campaign_id):
+    """View details of a specific campaign."""
+    return f"Details for campaign {campaign_id} (stub)"
+
+@app.route('/emails/sent')
+def emails_sent():
+    """List all sent emails."""
+    return "List of sent emails (stub)"
+
+@app.route('/emails/failed')
+def emails_failed():
+    """List all failed emails."""
+    return "List of failed emails (stub)"
+
+@app.route('/emails/<int:email_id>')
+def email_details(email_id):
+    """View details of a specific email."""
+    return f"Details for email {email_id} (stub)"
+
+@app.route('/analytics')
+def analytics():
+    """View analytics and performance metrics."""
+    return "Analytics dashboard (stub)"
+
+@app.route('/analytics/export')
+def analytics_export():
+    """Download analytics/report as Excel."""
+    return "Download analytics report (stub)"
+
+@app.route('/audit_log')
+def audit_log():
+    """View/download audit logs."""
+    return "Audit log (stub)"
+
+@app.route('/db/sync')
+def db_sync():
+    """Synchronize databases."""
+    return "Database sync (stub)"
+
+@app.route('/db/verify')
+def db_verify():
+    """Verify database consistency."""
+    return "Database verify (stub)"
+
+@app.route('/db/fix')
+def db_fix():
+    """Attempt to fix database issues."""
+    return "Database fix (stub)"
+
+@app.route('/db/cleanup')
+def db_cleanup():
+    """Clean up old data."""
+    return "Database cleanup (stub)"
+
+@app.route('/settings')
+def settings():
+    """View system settings/configuration."""
+    return "Settings page (stub)"
+
+@app.route('/accounts')
+def accounts():
+    """Manage email accounts."""
+    return "Accounts management (stub)"
+
+@app.route('/templates')
+def templates():
+    """List available email templates."""
+    return "Templates list (stub)"
+
+@app.route('/templates/<template_name>')
+def template_details(template_name):
+    """View template details."""
+    return f"Details for template {template_name} (stub)"
+
+# API endpoints (GET only, for AJAX/JS dashboards)
+@app.route('/api/campaigns')
+def api_campaigns():
+    """API: Get campaigns data."""
+    return "API campaigns data (stub)"
+
+@app.route('/api/emails')
+def api_emails():
+    """API: Get emails data."""
+    return "API emails data (stub)"
+
+@app.route('/api/analytics')
+def api_analytics():
+    """API: Get analytics data."""
+    return "API analytics data (stub)"
+
+@app.route('/api/settings')
+def api_settings():
+    """API: Get settings data."""
+    return "API settings data (stub)"
+
+# =================== END ADDED ROUTE STUBS ===================
 
 def keep_alive():
     """Keep the server alive by pinging itself every minute"""

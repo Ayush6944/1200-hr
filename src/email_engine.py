@@ -72,11 +72,21 @@ class EmailEngine:
                 server.send_message(msg)
                 
             logger.info(f"Email sent successfully to {to_email}")
-            return True
+            return True, False  # No exhaustion
             
         except Exception as e:
             logger.error(f"Error sending email to {to_email}: {str(e)}")
-            raise
+            # Detect exhaustion
+            error_str = str(e).lower()
+            exhausted = (
+                'user limit exceeded' in error_str or
+                'quota' in error_str or
+                'daily limit' in error_str or
+                '550' in error_str or
+                'rate limit' in error_str or
+                'suspicious activity' in error_str
+            )
+            return False, exhausted
     
     def send_batch(self, emails: List[Dict[str, str]], template: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Send a batch of emails using the provided template."""
@@ -106,17 +116,20 @@ class EmailEngine:
                 
                 # Send email with retries
                 success = False
+                exhausted = False
                 for attempt in range(self.max_retries):
                     try:
-                        self._send_email(
+                        send_result, exhausted_flag = self._send_email(
                             to_email=email_data['hr_email'],
                             subject=subject,
                             content=content,
                             is_html=template.get('is_html', True),
                             attachments=template.get('attachments', [])
                         )
-                        success = True
-                        break
+                        success = send_result
+                        exhausted = exhausted_flag
+                        if success or exhausted:
+                            break
                     except Exception as e:
                         if attempt < self.max_retries - 1:
                             wait_time = (2 ** attempt) + random.uniform(1, 5)
@@ -130,7 +143,8 @@ class EmailEngine:
                     'company_name': email_data['company_name'],
                     'hr_email': email_data['hr_email'],
                     'success': success,
-                    'error': None
+                    'error': None if success else 'Exhausted' if exhausted else 'Failed',
+                    'exhausted': exhausted
                 })
                 
             except Exception as e:
@@ -140,7 +154,8 @@ class EmailEngine:
                     'company_name': email_data['company_name'],
                     'hr_email': email_data['hr_email'],
                     'success': False,
-                    'error': str(e)
+                    'error': str(e),
+                    'exhausted': False
                 })
         
         return results

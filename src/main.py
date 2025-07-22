@@ -77,7 +77,7 @@ def signal_handler(signum, frame):
     sys.exit(0)
 
 def run_campaign(resume_path: str, batch_size: int = 50, daily_limit: int = 500, background: bool = False):
-    """Run the email campaign with round-robin sender accounts."""
+    """Run the email campaign with round-robin sender accounts, skipping exhausted accounts and resetting every 24 hours."""
     data_manager = None
     email_tracker = None
     try:
@@ -96,7 +96,12 @@ def run_campaign(resume_path: str, batch_size: int = 50, daily_limit: int = 500,
         with open(accounts_path, 'r') as f:
             accounts_json = json.load(f)
             sender_accounts = [acc for acc in accounts_json['email_accounts'] if acc.get('enabled', True)]
-        
+
+        # Track exhausted accounts and last reset time
+        exhausted_accounts = set()
+        last_reset = time.time()
+        RESET_INTERVAL = 24 * 60 * 60  # 24 hours in seconds
+
         # Verify resume exists
         if not os.path.exists(resume_path):
             raise FileNotFoundError(f"Resume not found at {resume_path}")
@@ -127,8 +132,26 @@ def run_campaign(resume_path: str, batch_size: int = 50, daily_limit: int = 500,
         
         # Round-robin send logic
         num_accounts = len(sender_accounts)
-        for idx, company in enumerate(companies):
-            account = sender_accounts[idx % num_accounts]
+        idx = 0
+        for company in companies:
+            # Reset exhausted accounts every 24 hours
+            if time.time() - last_reset > RESET_INTERVAL:
+                exhausted_accounts.clear()
+                last_reset = time.time()
+
+            # Find next available (not exhausted) account
+            attempts = 0
+            while attempts < num_accounts:
+                account = sender_accounts[idx % num_accounts]
+                if account['sender_email'] not in exhausted_accounts:
+                    break
+                idx += 1
+                attempts += 1
+            else:
+                logger.error("All accounts are exhausted. Skipping this batch.")
+                time.sleep(60)  # Wait a minute before retrying
+                continue
+
             logger.info(f"Sending email to {company['company_name']} ({company['hr_email']}) from {account['sender_email']}")
             try:
                 email_body = template_manager.format_template(
@@ -164,6 +187,12 @@ def run_campaign(resume_path: str, batch_size: int = 50, daily_limit: int = 500,
                 company_id = result['company_id']
                 success = result['success']
                 error = result.get('error')
+                exhausted = result.get('exhausted', False)
+                if exhausted:
+                    exhausted_accounts.add(account['sender_email'])
+                    logger.warning(f"Account {account['sender_email']} marked as exhausted due to SMTP error. Skipping for 24 hours.")
+                    idx += 1  # Move to next account for next email
+                    continue  # Try next account for this company
                 data_manager.mark_email_sent(
                     company_id,
                     status='sent' if success else 'failed',
@@ -191,12 +220,14 @@ def run_campaign(resume_path: str, batch_size: int = 50, daily_limit: int = 500,
                     os.fsync(f.fileno())
                 # Optional: add a small delay between emails if needed
                 time.sleep(account_config.get('batch_delay', 1))
+                idx += 1  # Move to next account for next email
             except Exception as e:
                 logger.error(f"Error sending email for company {company['company_name']}: {e}")
                 data_manager.mark_email_sent(company['id'], status='failed', error_message=str(e))
                 email_tracker.mark_email_sent(company['id'], status='failed', error_message=str(e))
                 save_progress(company['id'])
                 processed_count += 1
+                idx += 1  # Move to next account for next email
         
         logger.info(f"Campaign completed. Sent {processed_count} emails.")
         

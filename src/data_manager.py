@@ -328,11 +328,11 @@ class DataManager:
             raise
 
     def get_sent_companies_report(self, date: str = None) -> pd.DataFrame:
-        """Get a report of sent companies, optionally filtered by date."""
+        """Get a report of sent companies (only successful), optionally filtered by date."""
         try:
             with sqlite3.connect(self.companies_db) as conn:
                 if date:
-                    # Get companies sent on specific date
+                    # Get companies sent on specific date (only successful)
                     query = """
                         SELECT 
                             id,
@@ -342,13 +342,13 @@ class DataManager:
                             status,
                             error_message
                         FROM companies 
-                        WHERE email_sent = 1 
+                        WHERE status = 'sent' 
                         AND date(sent_timestamp) = date(?)
                         ORDER BY sent_timestamp DESC
                     """
                     df = pd.read_sql_query(query, conn, params=(date,))
                 else:
-                    # Get all sent companies
+                    # Get all sent companies (only successful)
                     query = """
                         SELECT 
                             id,
@@ -358,68 +358,57 @@ class DataManager:
                             status,
                             error_message
                         FROM companies 
-                        WHERE email_sent = 1 
+                        WHERE status = 'sent' 
                         ORDER BY sent_timestamp DESC
                     """
                     df = pd.read_sql_query(query, conn)
-                
                 if not df.empty:
-                    logger.info(f"Retrieved {len(df)} sent companies")
+                    logger.info(f"Retrieved {len(df)} sent companies (successful only)")
                 else:
-                    logger.info("No sent companies found")
-                
+                    logger.info("No sent companies found (successful only)")
                 return df
-                
         except Exception as e:
             logger.error(f"Error getting sent companies report: {str(e)}")
             raise
 
     def get_sent_companies_summary(self) -> dict:
-        """Get a summary of sent emails."""
+        """Get a summary of sent emails (only successful)."""
         try:
             with sqlite3.connect(self.companies_db) as conn:
                 cursor = conn.cursor()
-                
-                # Get total sent count
+                # Get total sent count (only successful)
                 cursor.execute("""
                     SELECT COUNT(*) FROM companies 
-                    WHERE email_sent = 1
+                    WHERE status = 'sent'
                 """)
                 total_sent = cursor.fetchone()[0]
-                
-                # Get today's sent count
+                # Get today's sent count (only successful)
                 cursor.execute("""
                     SELECT COUNT(*) FROM companies 
-                    WHERE email_sent = 1 
+                    WHERE status = 'sent' 
                     AND date(sent_timestamp) = date('now')
                 """)
                 sent_today = cursor.fetchone()[0]
-                
                 # Get failed emails count
                 cursor.execute("""
                     SELECT COUNT(*) FROM companies 
-                    WHERE email_sent = 1 
-                    AND status = 'failed'
+                    WHERE status = 'failed'
                 """)
                 failed_count = cursor.fetchone()[0]
-                
-                # Get last sent email timestamp
+                # Get last sent email timestamp (only successful)
                 cursor.execute("""
                     SELECT MAX(sent_timestamp) FROM companies 
-                    WHERE email_sent = 1
+                    WHERE status = 'sent'
                 """)
                 last_sent = cursor.fetchone()[0]
-                
                 summary = {
                     'total_sent': total_sent,
                     'sent_today': sent_today,
                     'failed_count': failed_count,
                     'last_sent': last_sent
                 }
-                
-                logger.info(f"Retrieved sent companies summary: {summary}")
+                logger.info(f"Retrieved sent companies summary (successful only): {summary}")
                 return summary
-                
         except Exception as e:
             logger.error(f"Error getting sent companies summary: {str(e)}")
             raise
