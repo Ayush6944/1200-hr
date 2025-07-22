@@ -28,8 +28,12 @@
 2025-07-16 11:27:58 - Campaign ENDED
 2025-07-16 11:33:00 - Campaign STARTED
 2025-07-16 11:33:23 - Campaign ENDED
-2025-07-21 22:18:00 - Campaign STARTED
-2025-07-21 22:18:01 - Campaign ENDED
-2025-07-21 22:20:00 - Campaign STARTED
-2025-07-22 10:35:00 - Campaign STARTED
-2025-07-22 10:36:37 - Campaign ENDED
+2025-07-18 19:03:00 - Campaign STARTED
+2025-07-18 19:05:22 - Campaign ENDED
+2025-07-18 20:00:00 - Campaign STARTED
+2025-07-18 20:00:00 - Campaign ERROR: Command '['python', '/src/main.py', '--resume', 'data/Ayush_Srivastava.pdf', '--batch-size', '5', '--daily-limit', '100']' returned non-zero exit status 2.
+2025-07-18 20:00:00 - Campaign ENDED
+2025-07-18 20:02:00 - Campaign STARTED
+2025-07-21 10:49:00 - Campaign STARTED
+2025-07-21 10:52:00 - Campaign STARTED
+2025-07-21 10:53:30 - Campaign ENDED
